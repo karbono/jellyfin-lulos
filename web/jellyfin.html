@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cine y series · Jellyfin</title>
-<meta name="description" content="Descarga Jellyfin para Android preconfigurado con nuestro servidor.">
+<title>Cine galáctico · Jellyfin</title>
+<meta name="description" content="Descarga Jellyfin para Android y Android TV preconfigurado con nuestro servidor.">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0f071c">
-<link rel="icon" href="/favicon-jellyfin.ico" sizes="any">
+<meta name="theme-color" content="#12062d">
+<link rel="icon" href="/favicon-jellyfin.ico?v=2" sizes="any">
 <style>
 :root{
-  --bg:#0f071c; --bg2:#180c2b; --card:#22123c; --line:#452773;
-  --fg:#f3ecff; --mut:#bba8db; --accent:#b58cff;
-  --btn:#6c35cc; --btn-end:#008ec2; --btn2:#271544; --btn2-h:#331c59;
+  --bg:#12062d; --bg2:#1b0942; --card:#260e59; --line:#47228a;
+  --fg:#f3eeff; --mut:#bfb0e3; --accent:#73e6ff; --lav:#c7a6ff;
+  --btn:#4d1f9e; --btn-end:#008dc4; --btn2:#2b1161; --btn2-h:#39187d;
 }
 *{box-sizing:border-box}
 html{background:var(--bg)}
@@ -22,27 +22,27 @@ body{
   line-height:1.5;
   color:var(--fg);
   background:
-    radial-gradient(1100px 560px at 85% -8%,#3b1c6e 0,transparent 60%),
-    radial-gradient(820px 460px at -10% 28%,#0b3b59 0,transparent 55%),
+    radial-gradient(1100px 560px at 85% -8%,#3d1580 0,transparent 60%),
+    radial-gradient(820px 460px at -10% 28%,#0e3869 0,transparent 55%),
     var(--bg);
   min-height:100vh;
 }
-.wrap{max-width:34rem;margin:0 auto;padding:1.25rem 1rem 3rem}
-.eyebrow{
-  display:inline-block;
-  font-size:.72rem;
-  letter-spacing:.1em;
-  text-transform:uppercase;
-  color:var(--accent);
-  background:#22123c;
-  border:1px solid var(--line);
-  border-radius:999px;
-  padding:.18rem .65rem;
-  margin-bottom:.5rem;
+.wrap{max-width:34rem;margin:0 auto;padding:1rem 1rem 3rem}
+.hero{
+  display:block;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 12px 40px #000a,0 0 28px #73e6ff22,0 0 0 1px #52299e;
+  margin-top:.5rem;
+  transition:transform .18s ease,box-shadow .18s ease;
 }
-h1{font-size:1.55rem;line-height:1.2;margin:0 0 .35rem}
-.lead{margin:.35rem 0 .2rem;font-size:1rem;text-wrap:pretty}
-.ver{color:var(--mut);font-size:.85rem;margin:.25rem 0 0;min-height:1.25em}
+.hero:hover{
+  transform:translateY(-1px);
+  box-shadow:0 16px 44px #000c,0 0 32px #73e6ff38,0 0 0 1px var(--accent);
+}
+.hero img{display:block;width:100%;height:auto;aspect-ratio:1024/338}
+.lead{margin:1.25rem 0 .2rem;font-size:1.05rem;text-wrap:pretty}
+.ver{color:var(--mut);font-size:.85rem;margin:0;min-height:1.25em}
 p,li,details{text-wrap:pretty}
 section{
   background:linear-gradient(180deg,var(--card),var(--bg2));
@@ -175,9 +175,10 @@ footer a:hover{text-decoration:underline}
 </head>
 <body>
 <div class="wrap">
-  <span class="eyebrow">Jellyfin · Android</span>
-  <h1>Cine y series</h1>
-  <p class="lead">App de Jellyfin para Android (con Chromecast) preconfigurada con nuestro servidor. Solo hace falta iniciar sesión.</p>
+  <a class="hero" id="hero" href="/jellyfin/apk" aria-label="Descargar Jellyfin APK">
+    <img src="/cabecera-jellyfin-v1-640.webp" srcset="/cabecera-jellyfin-v1-640.webp 640w, /cabecera-jellyfin-v1-1024.webp 1024w" sizes="(max-width: 34rem) 100vw, 34rem" alt="Cine galáctico Jellyfin: descargar APK" width="1024" height="338" fetchpriority="high" decoding="async">
+  </a>
+  <p class="lead">App de Jellyfin para Android (con Chromecast) y Android TV preconfigurada con nuestro servidor. Solo hace falta iniciar sesión.</p>
   <p id="ver" class="ver"></p>
 
   <section class="mine">
