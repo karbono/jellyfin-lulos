@@ -1,0 +1,148 @@
+name: Build Custom Jellyfin APK
+
+on:
+  schedule:
+    - cron: '15 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force rebuild even if version matches'
+        type: boolean
+        default: false
+      tag:
+        description: 'Specific upstream tag (e.g. v2.7.3). Empty = latest release'
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+env:
+  UPSTREAM_REPO: jellyfin/jellyfin-android
+  SERVER_URL: https://jelly.lulospi.party
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.compare.outputs.should_build }}
+      tag: ${{ steps.compare.outputs.tag }}
+      version: ${{ steps.compare.outputs.version }}
+    steps:
+      - name: Check upstream vs published version
+        id: compare
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG=$(curl -fsSL "https://api.github.com/repos/${UPSTREAM_REPO}/releases/latest" | jq -r '.tag_name')
+          fi
+          test -n "$TAG" && [ "$TAG" != "null" ] || { echo "Failed to resolve upstream tag" >&2; exit 1; }
+          VERSION="${TAG#v}"
+          echo "Upstream tag: $TAG (version $VERSION)"
+
+          CURRENT=$(curl -fsSL "https://github.com/${GITHUB_REPOSITORY}/releases/download/custom/jellyfin-lulos-VERSION.txt" 2>/dev/null | tr -d '[:space:]' || true)
+          echo "Published version: ${CURRENT:-<none>}"
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ inputs.force }}" = "true" ] || [ "$VERSION" != "$CURRENT" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Up to date ($VERSION). Skipping build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out customizer repo
+        uses: actions/checkout@v4
+
+      - name: Clone upstream Jellyfin Android (${{ needs.check.outputs.tag }})
+        run: |
+          git clone --depth 1 --branch "${{ needs.check.outputs.tag }}" \
+            "https://github.com/${UPSTREAM_REPO}.git" upstream
+
+      - name: Patch default Jellyfin server
+        run: |
+          python3 scripts/patch_server.py upstream/app/src/main/java/org/jellyfin/mobile/MainViewModel.kt
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version-file: upstream/.tools-versions
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode release keystore
+        working-directory: upstream
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$RELEASE_KEYSTORE_BASE64" || { echo 'Missing RELEASE_KEYSTORE_BASE64 secret.' >&2; exit 1; }
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > release-key.jks
+
+      - name: Build signed release APK (proprietary + Chromecast)
+        working-directory: upstream
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleProprietaryRelease --no-daemon --console=plain \
+            "-Pkeystore.file=$(pwd)/release-key.jks" \
+            "-Pkeystore.password=${RELEASE_STORE_PASSWORD}" \
+            "-Psigning.key.alias=${RELEASE_KEY_ALIAS}" \
+            "-Psigning.key.password=${RELEASE_KEY_PASSWORD}"
+
+      - name: Verify injected server URL and package fixed-name assets
+        run: |
+          APK=$(find upstream/app/build/outputs/apk/proprietary/release -maxdepth 2 -name "*.apk" | head -n 1)
+          test -f "$APK" || { echo "Built APK not found" >&2; exit 1; }
+          DIST="dist"
+          mkdir -p "$DIST"
+
+          cp "$APK" "$DIST/jellyfin-lulos.apk"
+          python3 scripts/verify_apk.py "$DIST/jellyfin-lulos.apk"
+
+          printf '%s\n' "${{ needs.check.outputs.version }}" > "$DIST/jellyfin-lulos-VERSION.txt"
+          (cd "$DIST" && sha256sum jellyfin-lulos.apk > jellyfin-lulos-SHA256SUMS.txt)
+          cat "$DIST/jellyfin-lulos-SHA256SUMS.txt"
+
+      - name: Publish custom release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.check.outputs.tag }}"
+          VER="${{ needs.check.outputs.version }}"
+          NOTES=$(cat <<EOF
+          Compilación automática de [Jellyfin Android ${TAG}](https://github.com/${UPSTREAM_REPO}/releases/tag/${TAG}) (variante proprietary con Chromecast) preconfigurada para **${SERVER_URL}**.
+
+          Solo hace falta introducir usuario y contraseña al abrir la app.
+
+          - \`jellyfin-lulos.apk\`: APK universal Android (con soporte Chromecast)
+          EOF
+          )
+          if gh release view custom >/dev/null 2>&1; then
+            gh release upload custom \
+              dist/jellyfin-lulos.apk \
+              dist/jellyfin-lulos-VERSION.txt \
+              dist/jellyfin-lulos-SHA256SUMS.txt \
+              --clobber
+            gh release edit custom \
+              --title "Jellyfin lulospi (${VER})" \
+              --notes "$NOTES"
+          else
+            gh release create custom \
+              dist/jellyfin-lulos.apk \
+              dist/jellyfin-lulos-VERSION.txt \
+              dist/jellyfin-lulos-SHA256SUMS.txt \
+              --title "Jellyfin lulospi (${VER})" \
+              --notes "$NOTES"
+          fi
