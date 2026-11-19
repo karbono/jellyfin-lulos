@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cine y series · Jellyfin</title>
+<meta name="description" content="Descarga Jellyfin para Android preconfigurado con nuestro servidor.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0f071c">
+<link rel="icon" href="/favicon-jellyfin.ico" sizes="any">
+<style>
+:root{
+  --bg:#0f071c; --bg2:#180c2b; --card:#22123c; --line:#452773;
+  --fg:#f3ecff; --mut:#bba8db; --accent:#b58cff;
+  --btn:#6c35cc; --btn-end:#008ec2; --btn2:#271544; --btn2-h:#331c59;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  line-height:1.5;
+  color:var(--fg);
+  background:
+    radial-gradient(1100px 560px at 85% -8%,#3b1c6e 0,transparent 60%),
+    radial-gradient(820px 460px at -10% 28%,#0b3b59 0,transparent 55%),
+    var(--bg);
+  min-height:100vh;
+}
+.wrap{max-width:34rem;margin:0 auto;padding:1.25rem 1rem 3rem}
+.eyebrow{
+  display:inline-block;
+  font-size:.72rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--accent);
+  background:#22123c;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:.18rem .65rem;
+  margin-bottom:.5rem;
+}
+h1{font-size:1.55rem;line-height:1.2;margin:0 0 .35rem}
+.lead{margin:.35rem 0 .2rem;font-size:1rem;text-wrap:pretty}
+.ver{color:var(--mut);font-size:.85rem;margin:.25rem 0 0;min-height:1.25em}
+p,li,details{text-wrap:pretty}
+section{
+  background:linear-gradient(180deg,var(--card),var(--bg2));
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:1rem;
+  margin:1rem 0;
+}
+section.mine{
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px var(--accent),0 0 26px #b58cff24;
+}
+h2{font-size:1.1rem;margin:0 0 .6rem;display:flex;align-items:center;gap:.5rem}
+.tag{
+  font-size:.7rem;
+  font-weight:700;
+  color:#150826;
+  background:var(--accent);
+  padding:.14rem .52rem;
+  border-radius:999px;
+}
+a.b{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  padding:.85rem 1rem;
+  border-radius:12px;
+  text-decoration:none;
+  color:var(--fg);
+  font-weight:600;
+  margin:.5rem 0;
+  background:var(--btn2);
+  border:1px solid var(--line);
+  transition:transform .12s ease,background .15s ease,box-shadow .15s ease,border-color .15s ease;
+}
+a.b.p{
+  background:linear-gradient(135deg,var(--btn),var(--btn-end));
+  border-color:#8a5be0;
+  box-shadow:0 6px 20px #0006,inset 0 1px 0 #ffffff24;
+}
+a.b.p:hover{transform:translateY(-1px);box-shadow:0 8px 24px #0008,0 0 0 1px var(--accent)}
+.bt{display:flex;flex-direction:column;gap:.12rem;min-width:0}
+.bt small{font-weight:400;font-size:.82rem;color:#e3d8f7}
+.row-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:.45rem}
+.fn{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;color:#d6c7ff;font-weight:400}
+.sz{font-size:.8rem;color:#d6c7ff;font-weight:400;white-space:nowrap}
+.qr{
+  display:none;
+  align-items:center;
+  gap:1rem;
+  margin-top:.85rem;
+  padding-top:.85rem;
+  border-top:1px solid var(--line);
+}
+.desk .qr{display:flex}
+.qr img{width:110px;height:110px;border-radius:10px;background:#fff;padding:6px;flex:none}
+.qr span{font-size:.88rem;color:var(--mut)}
+ol{margin:.25rem 0 0;padding-left:1.25rem;color:var(--mut);font-size:.92rem}
+ol li{margin:.35rem 0}
+ol strong,ol code{color:var(--fg)}
+code.srv{
+  background:#170a29;
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:.08rem .35rem;
+  font-size:.86em;
+  color:#d6c7ff;
+}
+details{font-size:.85rem;color:var(--mut)}
+summary{cursor:pointer;color:var(--fg);font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+.sha-list{margin-top:.6rem;display:flex;flex-direction:column;gap:.55rem}
+.sha-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.5rem;
+  background:#140924;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:.55rem .7rem;
+}
+.sha-info{min-width:0;display:flex;flex-direction:column;gap:.15rem}
+.sha-name{font-size:.78rem;color:var(--fg);font-weight:600}
+.sha-info code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.72rem;
+  color:var(--mut);
+  word-break:break-all;
+}
+.copy{position:relative;flex:none}
+.copy-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  border:1px solid var(--line);
+  background:var(--btn2);
+  color:var(--fg);
+  cursor:pointer;
+}
+.copy-button:hover{background:var(--btn2-h);border-color:var(--accent)}
+.copy-button .ic-ok{display:none;color:var(--accent)}
+.copy-button[data-copied] .ic-cp{display:none}
+.copy-button[data-copied] .ic-ok{display:block}
+.tip{
+  position:absolute;
+  right:0;
+  bottom:calc(100% + 6px);
+  background:#241140;
+  color:var(--accent);
+  border:1px solid var(--accent);
+  border-radius:6px;
+  font-size:.72rem;
+  padding:.15rem .45rem;
+  white-space:nowrap;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .15s ease;
+}
+.copy-button[data-copied] + .tip,
+.copy-button[data-failed] + .tip{opacity:1}
+footer{margin-top:1.5rem;font-size:.8rem;color:var(--mut);text-align:center}
+footer a{color:var(--accent);text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="eyebrow">Jellyfin · Android</span>
+  <h1>Cine y series</h1>
+  <p class="lead">App de Jellyfin para Android (con Chromecast) preconfigurada con nuestro servidor. Solo hace falta iniciar sesión.</p>
+  <p id="ver" class="ver"></p>
+
+  <section class="mine">
+    <h2>Android <span class="tag">Recomendado</span></h2>
+    <a class="b p" href="/jellyfin/apk" data-a="jellyfin-lulos.apk">
+      <span class="bt">
+        <span class="row-top">Aplicación .apk <code class="fn">jellyfin-lulos.apk</code> <span class="sz"></span></span>
+        <small>Incluye soporte Chromecast y conexión directa a jelly.lulospi.party.</small>
+      </span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+    </a>
+    <div class="qr">
+      <img src="/qr-jellyfin.svg" alt="Código QR para bajar Jellyfin Android" width="110" height="110" loading="lazy">
+      <span>¿Estás en el ordenador? Escanea este código con el móvil para bajar la app.</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cómo empezar</h2>
+    <ol>
+      <li>Instala el APK (el teléfono pedirá permiso para instalar aplicaciones de este origen).</li>
+      <li>Abre <strong>Jellyfin</strong>: conecta directamente a <code class="srv">https://jelly.lulospi.party</code>.</li>
+      <li>Introduce tu <strong>usuario y contraseña</strong>.</li>
+    </ol>
+  </section>
+
+  <section>
+    <details>
+      <summary>Verificación SHA256</summary>
+      <div id="sumlist" class="sha-list">Cargando firmas…</div>
+    </details>
+  </section>
+
+  <footer>
+    <a href="/">← Todas las descargas</a> ·
+    Basado en <a href="https://github.com/jellyfin/jellyfin-android" rel="noopener">Jellyfin Android</a> ·
+    <a href="https://github.com/karbono/jellyfin-lulos/releases/tag/custom" rel="noopener">karbono/jellyfin-lulos</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var ua = navigator.userAgent || "";
+  var mobile = /Android|iPhone|iPad|iPod/i.test(ua);
+  if (!mobile) document.documentElement.classList.add("desk");
+
+  var timers = new WeakMap(), lastMessage = "";
+  function report(button, ok) {
+    var tip = button.nextElementSibling;
+    clearTimeout(timers.get(button));
+    button.removeAttribute("data-copied");
+    button.removeAttribute("data-failed");
+    var message = ok ? "Copiado" : "Error";
+    if (message === lastMessage) message += "\u00A0";
+    lastMessage = message;
+    tip.textContent = "";
+    void button.offsetWidth;
+    button.setAttribute(ok ? "data-copied" : "data-failed", "");
+    requestAnimationFrame(function(){ tip.textContent = message; });
+    timers.set(button, setTimeout(function(){
+      button.removeAttribute("data-copied");
+      button.removeAttribute("data-failed");
+      tip.textContent = "";
+    }, 2000));
+  }
+  async function copy(button, target) {
+    var text = target.innerText.trim();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      report(button, true);
+    } catch (_) {
+      report(button, false);
+    }
+  }
+  if ("CommandEvent" in window) {
+    document.addEventListener("command", function(event){
+      if (event.command === "--copy") copy(event.source, event.target);
+    }, true);
+  } else {
+    document.addEventListener("click", function(event){
+      var button = event.target.closest('button[command="--copy"]');
+      if (!button) return;
+      var target = document.getElementById(button.getAttribute("commandfor"));
+      if (target) copy(button, target);
+    });
+  }
+
+  fetch("https://api.github.com/repos/karbono/jellyfin-lulos/releases/tags/custom", {headers:{Accept:"application/vnd.github+json"}})
+    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(d){
+      var by = {};
+      (d.assets || []).forEach(function(a){ by[a.name] = a; });
+      var m = /\(([^)]+)\)/.exec(d.name || "");
+      var ver = m ? m[1] : "";
+      var when = "";
+      document.querySelectorAll("a[data-a]").forEach(function(a){
+        var x = by[a.getAttribute("data-a")];
+        if (!x) return;
+        if (x.updated_at > when) when = x.updated_at;
+        if (x.size) {
+          var s = a.querySelector(".sz");
+          if (s) s.textContent = "· " + Math.round(x.size / 1048576) + " MB";
+        }
+      });
+      when = when || d.published_at || d.created_at;
+      if (ver || when) {
+        document.getElementById("ver").textContent = (ver ? "Versión " + ver : "Última compilación") +
+          (when ? " · actualizada el " + new Date(when).toLocaleDateString("es-ES",{day:"numeric",month:"long",year:"numeric"}) : "");
+      }
+
+      var list = document.getElementById("sumlist"), rows = [];
+      document.querySelectorAll("a[data-a]").forEach(function(a, idx){
+        var x = by[a.getAttribute("data-a")];
+        if (x && x.digest) rows.push({name: x.name, sha: x.digest.replace(/^sha256:/, ""), id: "sha-" + idx});
+      });
+      if (rows.length) {
+        list.textContent = "";
+        rows.forEach(function(item){
+          var row = document.createElement("div");
+          row.className = "sha-row";
+          var info = document.createElement("div");
+          info.className = "sha-info";
+          var nm = document.createElement("span");
+          nm.className = "sha-name";
+          nm.textContent = item.name;
+          var cd = document.createElement("code");
+          cd.id = item.id;
+          cd.textContent = item.sha;
+          info.appendChild(nm);
+          info.appendChild(cd);
+          var wrap = document.createElement("span");
+          wrap.className = "copy";
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "copy-button";
+          btn.setAttribute("command", "--copy");
+          btn.setAttribute("commandfor", item.id);
+          btn.setAttribute("aria-label", "Copiar SHA256 de " + item.name);
+          btn.innerHTML = '<svg class="ic-cp" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><svg class="ic-ok" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+          var tip = document.createElement("span");
+          tip.className = "tip";
+          tip.setAttribute("role", "status");
+          wrap.appendChild(btn);
+          wrap.appendChild(tip);
+          row.appendChild(info);
+          row.appendChild(wrap);
+          list.appendChild(row);
+        });
+      }
+    })
+    .catch(function(){});
+})();
+</script>
+</body>
+</html>
