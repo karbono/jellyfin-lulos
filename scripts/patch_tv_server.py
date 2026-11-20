@@ -6,7 +6,7 @@ import re
 import sys
 from pathlib import Path
 
-DEFAULT_URL = os.environ.get("SERVER_URL", "https://jelly.lulospi.party").strip().rstrip("/")
+DEFAULT_URL = os.environ.get("SERVER_URL", "https://tv.karbono.es").strip().rstrip("/")
 
 
 def patch_server_repository(path: Path) -> None:

@@ -19,7 +19,7 @@ permissions:
 
 env:
   UPSTREAM_REPO: jellyfin/jellyfin-androidtv
-  SERVER_URL: https://jelly.lulospi.party
+  SERVER_URL: https://tv.karbono.es
 
 jobs:
   check:
