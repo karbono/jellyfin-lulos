@@ -19,7 +19,7 @@ permissions:
 
 env:
   UPSTREAM_REPO: jellyfin/jellyfin-android
-  SERVER_URL: https://tv.karbono.es
+  SERVER_URL: https://tv.karbono.es:8920
 
 jobs:
   check:
