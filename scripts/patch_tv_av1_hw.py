@@ -6,7 +6,8 @@ dav1d or libgav1) as proof that the device can direct play AV1, and takes the ma
 resolution across all of them. On most TVs the software decoder cannot keep up with
 4K AV1, so playback stops after a few seconds instead of letting the server transcode.
 
-After this patch, software AV1 decoders are ignored regardless of the
+After this patch, AV1 decoders must be hardware accelerated (Android 10+: not
+isSoftwareOnly and isHardwareAccelerated; older: name heuristic) regardless of the
 "Use software codecs" preference; other codecs keep upstream behaviour.
 """
 
@@ -20,7 +21,7 @@ HELPERS = (
     "\t// " + MARKER + "\n"
     "\tprivate val MediaCodecInfo.looksLikeSoftwareCodec: Boolean\n"
     "\t\tget() {\n"
-    "\t\t\tif (AndroidVersion.isAtLeastQ) return isSoftwareOnly\n"
+    "\t\t\tif (AndroidVersion.isAtLeastQ) return isSoftwareOnly || !isHardwareAccelerated\n"
     "\t\t\tval n = name.lowercase()\n"
     "\t\t\treturn n.startsWith(\"omx.google.\") || n.startsWith(\"c2.android.\") ||\n"
     "\t\t\t\tn.contains(\"dav1d\") || n.contains(\"gav1\") || n.contains(\"ffmpeg\")\n"
@@ -51,7 +52,8 @@ EXPECTED_CALLS = 5
 
 
 def patch(path: Path) -> None:
-    raw = path.read_text(encoding="utf-8")
+    with open(path, encoding="utf-8", newline="") as fh:
+        raw = fh.read()
     eol = "\r\n" if "\r\n" in raw else "\n"
     text = raw.replace("\r\n", "\n")
 
@@ -87,7 +89,8 @@ def patch(path: Path) -> None:
             sys.stderr.write(f"ERROR: {name}() calls decoderInfos(mime) without a mime parameter.\n")
             sys.exit(1)
 
-    path.write_text(text.replace("\n", eol), encoding="utf-8")
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(text.replace("\n", eol))
     print(f"OK: Patched {path} (AV1 hardware decoders only, {calls} call sites)")
 
 
