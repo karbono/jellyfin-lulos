@@ -31,13 +31,17 @@ jobs:
     steps:
       - name: Check upstream vs published version
         id: compare
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_FORCE: ${{ inputs.force }}
         run: |
-          if [ -n "${{ inputs.tag }}" ]; then
-            TAG="${{ inputs.tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
           else
             TAG=$(curl -fsSL "https://api.github.com/repos/${UPSTREAM_REPO}/releases/latest" | jq -r '.tag_name')
           fi
           test -n "$TAG" && [ "$TAG" != "null" ] || { echo "Failed to resolve upstream tag" >&2; exit 1; }
+          [[ "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "Invalid tag format" >&2; exit 1; }
           VERSION="${TAG#v}"
           echo "Upstream tag: $TAG (version $VERSION)"
 
@@ -47,7 +51,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-          if [ "${{ inputs.force }}" = "true" ] || [ "$VERSION" != "$CURRENT" ]; then
+          if [ "$INPUT_FORCE" = "true" ] || [ "$VERSION" != "$CURRENT" ]; then
             echo "should_build=true" >> "$GITHUB_OUTPUT"
           else
             echo "Up to date ($VERSION). Skipping build."
@@ -60,11 +64,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out customizer repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Clone upstream Jellyfin Android (${{ needs.check.outputs.tag }})
+        env:
+          UPSTREAM_TAG: ${{ needs.check.outputs.tag }}
         run: |
-          git clone --depth 1 --branch "${{ needs.check.outputs.tag }}" \
+          git clone --depth 1 --branch "$UPSTREAM_TAG" \
             "https://github.com/${UPSTREAM_REPO}.git" upstream
 
       - name: Patch default Jellyfin server
@@ -72,38 +78,49 @@ jobs:
           python3 scripts/patch_server.py upstream/app/src/main/java/org/jellyfin/mobile/MainViewModel.kt
 
       - name: Set up Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version-file: upstream/.tools-versions
 
       - name: Set up Gradle cache
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
-      - name: Decode release keystore
+      - name: Build unsigned release APK
         working-directory: upstream
+        run: |
+          ./gradlew assembleProprietaryRelease --no-daemon --console=plain
+
+      - name: Sign release APK (isolated, no upstream code runs here)
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-        run: |
-          test -n "$RELEASE_KEYSTORE_BASE64" || { echo 'Missing RELEASE_KEYSTORE_BASE64 secret.' >&2; exit 1; }
-          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > release-key.jks
-
-      - name: Build signed release APK (proprietary + Chromecast)
-        working-directory: upstream
-        env:
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          ./gradlew assembleProprietaryRelease --no-daemon --console=plain \
-            "-Pkeystore.file=$(pwd)/release-key.jks" \
-            "-Pkeystore.password=${RELEASE_STORE_PASSWORD}" \
-            "-Psigning.key.alias=${RELEASE_KEY_ALIAS}" \
-            "-Psigning.key.password=${RELEASE_KEY_PASSWORD}"
+          set -euo pipefail
+          test -n "$RELEASE_KEYSTORE_BASE64" || { echo 'Missing RELEASE_KEYSTORE_BASE64 secret.' >&2; exit 1; }
+          UNSIGNED=$(find upstream/app/build/outputs/apk/proprietary/release -maxdepth 2 -name "*.apk" | head -n 1)
+          test -f "$UNSIGNED" || { echo "Built APK not found" >&2; exit 1; }
+          BT_DIR=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/ | sort -V | tail -n 1)
+          KEYSTORE="$RUNNER_TEMP/release-key.jks"
+          trap 'rm -f "$KEYSTORE"' EXIT
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          mkdir -p signed
+          "${BT_DIR}zipalign" -f -p 4 "$UNSIGNED" signed/aligned.apk
+          "${BT_DIR}apksigner" sign \
+            --ks "$KEYSTORE" \
+            --ks-key-alias "$RELEASE_KEY_ALIAS" \
+            --ks-pass env:RELEASE_STORE_PASSWORD \
+            --key-pass env:RELEASE_KEY_PASSWORD \
+            --out signed/signed.apk signed/aligned.apk
+          "${BT_DIR}apksigner" verify signed/signed.apk
 
       - name: Verify injected server URL and package fixed-name assets
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
         run: |
-          APK=$(find upstream/app/build/outputs/apk/proprietary/release -maxdepth 2 -name "*.apk" | head -n 1)
+          APK="signed/signed.apk"
           test -f "$APK" || { echo "Built APK not found" >&2; exit 1; }
           DIST="dist"
           mkdir -p "$DIST"
@@ -111,16 +128,16 @@ jobs:
           cp "$APK" "$DIST/jellyfin-lulos.apk"
           python3 scripts/verify_apk.py "$DIST/jellyfin-lulos.apk"
 
-          printf '%s\n' "${{ needs.check.outputs.version }}" > "$DIST/jellyfin-lulos-VERSION.txt"
+          printf '%s\n' "$VERSION" > "$DIST/jellyfin-lulos-VERSION.txt"
           (cd "$DIST" && sha256sum jellyfin-lulos.apk > jellyfin-lulos-SHA256SUMS.txt)
           cat "$DIST/jellyfin-lulos-SHA256SUMS.txt"
 
       - name: Publish custom release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.check.outputs.tag }}
+          VER: ${{ needs.check.outputs.version }}
         run: |
-          TAG="${{ needs.check.outputs.tag }}"
-          VER="${{ needs.check.outputs.version }}"
           NOTES=$(cat <<EOF
           Compilación automática de [Jellyfin Android ${TAG}](https://github.com/${UPSTREAM_REPO}/releases/tag/${TAG}) (variante proprietary con Chromecast) preconfigurada para **${SERVER_URL}**.
 
