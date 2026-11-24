@@ -23,6 +23,8 @@ env:
 
 jobs:
   check:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     outputs:
       should_build: ${{ steps.compare.outputs.should_build }}
@@ -32,13 +34,14 @@ jobs:
       - name: Check upstream vs published TV version
         id: compare
         env:
+          GH_TOKEN: ${{ github.token }}
           INPUT_TAG: ${{ inputs.tag }}
           INPUT_FORCE: ${{ inputs.force }}
         run: |
           if [ -n "$INPUT_TAG" ]; then
             TAG="$INPUT_TAG"
           else
-            TAG=$(curl -fsSL "https://api.github.com/repos/${UPSTREAM_REPO}/releases/latest" | jq -r '.tag_name')
+            TAG=$(gh api "repos/${UPSTREAM_REPO}/releases/latest" --jq '.tag_name')
           fi
           test -n "$TAG" && [ "$TAG" != "null" ] || { echo "Failed to resolve upstream TV tag" >&2; exit 1; }
           [[ "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "Invalid tag format" >&2; exit 1; }
